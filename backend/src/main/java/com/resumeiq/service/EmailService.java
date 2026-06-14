@@ -28,10 +28,12 @@ public class EmailService {
     @Async
     public void sendUserWelcomeEmail(String userEmail, String firstName) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(userEmail);
-            message.setSubject("Welcome to ResumeIQ, " + firstName + "!");
+            jakarta.mail.internet.MimeMessage mimeMessage = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(mimeMessage, "utf-8");
+            
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(fromEmail, "ResumeIQ"));
+            helper.setTo(userEmail);
+            helper.setSubject("Welcome to ResumeIQ, " + firstName + "!");
             
             String body = "Hi " + firstName + ",\n\n" +
                           "Thank you for joining ResumeIQ!\n" +
@@ -39,8 +41,8 @@ public class EmailService {
                           "Best regards,\n" +
                           "The ResumeIQ Team";
             
-            message.setText(body);
-            mailSender.send(message);
+            helper.setText(body, false);
+            mailSender.send(mimeMessage);
             log.info("Welcome email sent successfully to {}", userEmail);
         } catch (Exception e) {
             log.error("Failed to send welcome email to {}: {}", userEmail, e.getMessage());
@@ -50,13 +52,15 @@ public class EmailService {
     @Async
     public void sendAdminNotification(String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo("admin@resumeiq.com"); // Hardcoded admin email, or parameterize if needed
-            message.setSubject("[ADMIN ALERT] " + subject);
-            message.setText(body);
+            jakarta.mail.internet.MimeMessage mimeMessage = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(mimeMessage, "utf-8");
             
-            mailSender.send(message);
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(fromEmail, "ResumeIQ"));
+            helper.setTo("admin@resumeiq.com"); 
+            helper.setSubject("[ADMIN ALERT] " + subject);
+            helper.setText(body, false);
+            
+            mailSender.send(mimeMessage);
             log.info("Admin notification sent successfully.");
         } catch (Exception e) {
             log.error("Failed to send admin notification: {}", e.getMessage());
