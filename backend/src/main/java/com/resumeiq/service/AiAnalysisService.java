@@ -36,6 +36,12 @@ public class AiAnalysisService {
                 PDFTextStripper pdfStripper = new PDFTextStripper();
                 return pdfStripper.getText(document);
             }
+        } else if (filename != null && filename.toLowerCase().endsWith(".docx")) {
+            try (java.io.InputStream is = file.getInputStream();
+                 org.apache.poi.xwpf.usermodel.XWPFDocument document = new org.apache.poi.xwpf.usermodel.XWPFDocument(is);
+                 org.apache.poi.xwpf.extractor.XWPFWordExtractor extractor = new org.apache.poi.xwpf.extractor.XWPFWordExtractor(document)) {
+                return extractor.getText();
+            }
         } else {
             return new String(file.getBytes());
         }
@@ -288,6 +294,40 @@ public class AiAnalysisService {
         fallback.sectionAnalysis.certifications = "Not deeply analyzed during offline fallback.";
         
         return fallback;
+    }
+
+    public String optimizeResume(String rawText) {
+        String prompt = "You are an expert resume writer and ATS optimization specialist. " +
+            "Your task is to completely rewrite the following resume to achieve a 95+ ATS score. " +
+            "Follow these STRICT rules:\n" +
+            "1. Use clear, professional formatting with standard section headers (Professional Summary, Experience, Education, Skills, Projects).\n" +
+            "2. Ensure all bullet points under Experience and Projects are impactful, metrics-driven, and start with strong action verbs. Quantify achievements where possible (e.g., 'improved by X%'). If original metrics are missing, use plausible placeholders like [Metric] or refine the phrasing to sound highly impactful.\n" +
+            "3. Organize skills logically into categories.\n" +
+            "4. Correct any grammatical or structural errors.\n" +
+            "5. Return the newly generated resume formatted cleanly in Markdown.\n\n" +
+            "Original Resume Text:\n" + rawText;
+
+        com.google.genai.types.GenerateContentConfig optimizeConfig = com.google.genai.types.GenerateContentConfig.builder()
+            .responseMimeType("text/plain")
+            .build();
+
+        try {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    com.google.genai.types.GenerateContentResponse response = geminiClient.models.generateContent(
+                        primaryModel, prompt, optimizeConfig
+                    );
+                    return response.text();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }, geminiTaskExecutor);
+
+            return future.get(60000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.error("Failed to generate optimized resume: {}", e.getMessage());
+            throw new RuntimeException("Failed to optimize resume: " + e.getMessage());
+        }
     }
 
     public String chatWithAi(String message, String context) {
