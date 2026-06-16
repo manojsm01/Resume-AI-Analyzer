@@ -35,13 +35,27 @@ export default function ResumeDetailsPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
+  const handleDownloadDOCX = () => {
     if (!result.optimizedResume) return;
-    const blob = new Blob([result.optimizedResume], { type: 'text/markdown' });
+    const element = document.getElementById("print-resume-content");
+    if (!element) return;
+    
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Resume</title></head><body>";
+    const footer = "</body></html>";
+    const sourceHTML = header + element.innerHTML + footer;
+    
+    const blob = new Blob(['\ufeff', sourceHTML], {
+        type: 'application/msword'
+    });
+    
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `optimized-resume-${result.filename || 'download'}.md`;
+    a.download = `optimized-resume-${result.filename || 'download'}.doc`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -101,7 +115,8 @@ export default function ResumeDetailsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <>
+    <div className="no-print max-w-5xl mx-auto space-y-8">
       <div className="flex items-center gap-4">
         <Link href="/dashboard/resumes" className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors">
           <ArrowLeft size={20} />
@@ -163,10 +178,16 @@ export default function ResumeDetailsPage() {
               ATS-Optimized Resume
             </h3>
             {result.optimizedResume && (
-              <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors">
-                <Download size={16} />
-                Download Markdown
-              </button>
+              <div className="flex gap-2">
+                <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors">
+                  <Download size={16} />
+                  Download PDF
+                </button>
+                <button onClick={handleDownloadDOCX} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+                  <Download size={16} />
+                  Download DOC
+                </button>
+              </div>
             )}
           </div>
           
@@ -363,5 +384,11 @@ export default function ResumeDetailsPage() {
         )}
       </motion.div>
     </div>
+    
+    {/* Hidden element strictly for PDF and DOC printing */}
+    <div id="print-resume-content" className="print-only hidden prose prose-black max-w-none p-8 bg-white text-black">
+      {result?.optimizedResume && <ReactMarkdown>{result.optimizedResume}</ReactMarkdown>}
+    </div>
+    </>
   );
 }
