@@ -65,6 +65,7 @@ public class ResumeController {
                 result.interviewQuestions != null ? result.interviewQuestions.project : new ArrayList<>(),
                 sectionAnalysis
             );
+            analysis.setRawText(text);
             
             ResumeAnalysis savedAnalysis = resumeAnalysisRepository.save(analysis);
 
@@ -105,6 +106,37 @@ public class ResumeController {
             return ResponseEntity.ok(analysis);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error retrieving analysis: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/optimize")
+    public ResponseEntity<?> optimizeResume(@PathVariable Long id) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+
+            ResumeAnalysis analysis = resumeAnalysisRepository.findById(id).orElseThrow(() -> new RuntimeException("Analysis not found"));
+            
+            if (!analysis.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body("Access denied");
+            }
+
+            if (analysis.getOptimizedResume() != null) {
+                return ResponseEntity.ok(java.util.Collections.singletonMap("optimizedResume", analysis.getOptimizedResume()));
+            }
+
+            if (analysis.getRawText() == null) {
+                return ResponseEntity.badRequest().body("Raw text is not available for this resume.");
+            }
+
+            String optimized = aiAnalysisService.optimizeResume(analysis.getRawText());
+            analysis.setOptimizedResume(optimized);
+            resumeAnalysisRepository.save(analysis);
+
+            return ResponseEntity.ok(java.util.Collections.singletonMap("optimizedResume", optimized));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error optimizing resume: " + e.getMessage());
         }
     }
 }
