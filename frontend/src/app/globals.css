@@ -143,3 +143,24 @@
     100% { top: 100%; opacity: 0; }
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    background-image: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  /* Optional: Make prose black in print */
+  .prose {
+    color: black !important;
+  }
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose strong {
+    color: black !important;
+  }
+}
